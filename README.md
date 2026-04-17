@@ -1,6 +1,6 @@
 # 🛒 E-Commerce Agent — Text-to-SQL com Gemini
 
-Agente de IA capaz de responder perguntas em linguagem natural sobre um banco de dados de e-commerce, utilizando **Gemini 2.0 Flash** e **SQLite**. O agente converte perguntas em português para queries SQL automaticamente (Text-to-SQL), executa no banco e retorna respostas interpretadas.
+Agente de IA capaz de responder perguntas em linguagem natural sobre um banco de dados de e-commerce, utilizando **Gemini 2.5 Flash** e **SQLite**. O agente converte perguntas em português para queries SQL automaticamente (Text-to-SQL), executa no banco e retorna respostas interpretadas.
 
 ## 🗂️ Estrutura do Projeto
 
