@@ -1,0 +1,96 @@
+import os
+import json
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
+from tools import TOOLS_DEFINITION, TOOLS_MAP
+from database import get_schema
+
+load_dotenv()
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+MODEL = "gemini-2-5-flash-preview-04-17"
+
+
+def build_system_prompt() -> str:
+    schema = get_schema()
+    return f"""Você é um agente especialista em análise de dados de um sistema de e-commerce brasileiro.
+Você tem acesso a um banco de dados SQLite com as seguintes tabelas:
+
+{schema}
+
+Regras importantes:
+- Sempre use a ferramenta `obter_schema` se tiver dúvida sobre a estrutura do banco.
+- Sempre use a ferramenta `executar_query` para buscar dados reais antes de responder.
+- Gere apenas queries SELECT. Nunca use INSERT, UPDATE, DELETE ou DROP.
+- Responda sempre em português brasileiro de forma clara e objetiva.
+- Ao apresentar resultados numéricos, formate valores monetários em BRL (R$).
+- Se a pergunta não puder ser respondida com os dados disponíveis, explique o motivo.
+"""
+
+
+def run_agent(user_question: str) -> str:
+    """
+    Executa o agente com uma pergunta do usuário e retorna a resposta final.
+    """
+    client = genai.Client(api_key=GEMINI_API_KEY)
+
+    tools = [types.Tool(function_declarations=TOOLS_DEFINITION)]
+
+    messages = [
+        types.Content(role="user", parts=[types.Part(text=user_question)])
+    ]
+
+    system_prompt = build_system_prompt()
+
+    while True:
+        response = client.models.generate_content(
+            model=MODEL,
+            contents=messages,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                tools=tools,
+            )
+        )
+
+        candidate = response.candidates[0]
+        messages.append(types.Content(role="model", parts=candidate.content.parts))
+
+        # Verificar se há chamadas de ferramentas
+        tool_calls = [p for p in candidate.content.parts if p.function_call]
+
+        if not tool_calls:
+            # Sem tool calls — resposta final
+            text_parts = [p.text for p in candidate.content.parts if p.text]
+            return "\n".join(text_parts)
+
+        # Executar cada tool call
+        tool_results = []
+        for part in tool_calls:
+            fn_name = part.function_call.name
+            fn_args = dict(part.function_call.args)
+
+            print(f"  [tool] {fn_name}({fn_args})")
+
+            if fn_name in TOOLS_MAP:
+                result = TOOLS_MAP[fn_name](**fn_args)
+            else:
+                result = f"Ferramenta '{fn_name}' não encontrada."
+
+            tool_results.append(
+                types.Part(
+                    function_response=types.FunctionResponse(
+                        name=fn_name,
+                        response={"result": result}
+                    )
+                )
+            )
+
+        messages.append(types.Content(role="user", parts=tool_results))
+
+
+if __name__ == "__main__":
+    question = "Quais são os 10 produtos mais vendidos?"
+    print(f"Pergunta: {question}\n")
+    answer = run_agent(question)
+    print(f"\nResposta:\n{answer}")
