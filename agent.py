@@ -32,27 +32,36 @@ Regras importantes:
 def run_agent(user_question: str, max_iterations: int = 10) -> str:
     """
     Executa o agente com uma pergunta do usuário e retorna a resposta final.
-    Suporta auto-correção iterativa em caso de erros nas queries.
+    Suporta auto-correção iterativa e retry em caso de sobrecarga da API.
     """
+    import time
+
     client = genai.Client(api_key=GEMINI_API_KEY)
-
     tools = [types.Tool(function_declarations=TOOLS_DEFINITION)]
-
     messages = [
         types.Content(role="user", parts=[types.Part(text=user_question)])
     ]
-
     system_prompt = build_system_prompt()
 
     for iteration in range(max_iterations):
-        response = client.models.generate_content(
-            model=MODEL,
-            contents=messages,
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                tools=tools,
-            )
-        )
+        # Retry em caso de erro 503
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model=MODEL,
+                    contents=messages,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        tools=tools,
+                    )
+                )
+                break
+            except Exception as e:
+                if "503" in str(e) and attempt < 2:
+                    print(f"  [retry] API sobrecarregada, tentando novamente em 5s...")
+                    time.sleep(5)
+                else:
+                    raise
 
         candidate = response.candidates[0]
         messages.append(types.Content(role="model", parts=candidate.content.parts))
@@ -67,7 +76,6 @@ def run_agent(user_question: str, max_iterations: int = 10) -> str:
         for part in tool_calls:
             fn_name = part.function_call.name
             fn_args = dict(part.function_call.args)
-
             print(f"  [tool call] {fn_name}({fn_args})")
 
             if fn_name in TOOLS_MAP:
@@ -75,7 +83,6 @@ def run_agent(user_question: str, max_iterations: int = 10) -> str:
             else:
                 result = f"Ferramenta '{fn_name}' não encontrada."
 
-            # Auto-correção: informa o agente se houve erro na query
             if result.startswith("Erro"):
                 print(f"  [auto-correção] Erro detectado, agente irá tentar corrigir...")
 
