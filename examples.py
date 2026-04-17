@@ -1,3 +1,4 @@
+import time
 from agent import run_agent
 
 EXEMPLOS = [
@@ -47,6 +48,7 @@ def run_examples(categorias: list[str] = None):
         resposta = run_agent(pergunta)
         print(f"🤖 Resposta:\n{resposta}")
         print("-" * 60)
+        time.sleep(13)
 
 
 if __name__ == "__main__":

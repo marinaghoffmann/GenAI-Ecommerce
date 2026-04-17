@@ -1,5 +1,5 @@
 import os
-import json
+import time
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -34,8 +34,6 @@ def run_agent(user_question: str, max_iterations: int = 10) -> str:
     Executa o agente com uma pergunta do usuário e retorna a resposta final.
     Suporta auto-correção iterativa e retry em caso de sobrecarga da API.
     """
-    import time
-
     client = genai.Client(api_key=GEMINI_API_KEY)
     tools = [types.Tool(function_declarations=TOOLS_DEFINITION)]
     messages = [
@@ -44,8 +42,7 @@ def run_agent(user_question: str, max_iterations: int = 10) -> str:
     system_prompt = build_system_prompt()
 
     for iteration in range(max_iterations):
-        # Retry em caso de erro 503
-        for attempt in range(3):
+        for attempt in range(5):
             try:
                 response = client.models.generate_content(
                     model=MODEL,
@@ -57,9 +54,13 @@ def run_agent(user_question: str, max_iterations: int = 10) -> str:
                 )
                 break
             except Exception as e:
-                if "503" in str(e) and attempt < 2:
-                    print(f"  [retry] API sobrecarregada, tentando novamente em 5s...")
+                error_str = str(e)
+                if "503" in error_str and attempt < 4:
+                    print(f"  [retry] API sobrecarregada, aguardando 5s...")
                     time.sleep(5)
+                elif "429" in error_str and attempt < 4:
+                    print(f"  [retry] Rate limit atingido, aguardando 15s...")
+                    time.sleep(15)
                 else:
                     raise
 
