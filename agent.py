@@ -9,7 +9,7 @@ from database import get_schema
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-MODEL = "gemini-2-5-flash-preview-04-17"
+MODEL = "gemini-2.5-flash"
 
 
 def build_system_prompt() -> str:
@@ -29,9 +29,10 @@ Regras importantes:
 """
 
 
-def run_agent(user_question: str) -> str:
+def run_agent(user_question: str, max_iterations: int = 10) -> str:
     """
     Executa o agente com uma pergunta do usuário e retorna a resposta final.
+    Suporta auto-correção iterativa em caso de erros nas queries.
     """
     client = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -43,7 +44,7 @@ def run_agent(user_question: str) -> str:
 
     system_prompt = build_system_prompt()
 
-    while True:
+    for iteration in range(max_iterations):
         response = client.models.generate_content(
             model=MODEL,
             contents=messages,
@@ -56,26 +57,27 @@ def run_agent(user_question: str) -> str:
         candidate = response.candidates[0]
         messages.append(types.Content(role="model", parts=candidate.content.parts))
 
-        # Verificar se há chamadas de ferramentas
         tool_calls = [p for p in candidate.content.parts if p.function_call]
 
         if not tool_calls:
-            # Sem tool calls — resposta final
             text_parts = [p.text for p in candidate.content.parts if p.text]
             return "\n".join(text_parts)
 
-        # Executar cada tool call
         tool_results = []
         for part in tool_calls:
             fn_name = part.function_call.name
             fn_args = dict(part.function_call.args)
 
-            print(f"  [tool] {fn_name}({fn_args})")
+            print(f"  [tool call] {fn_name}({fn_args})")
 
             if fn_name in TOOLS_MAP:
                 result = TOOLS_MAP[fn_name](**fn_args)
             else:
                 result = f"Ferramenta '{fn_name}' não encontrada."
+
+            # Auto-correção: informa o agente se houve erro na query
+            if result.startswith("Erro"):
+                print(f"  [auto-correção] Erro detectado, agente irá tentar corrigir...")
 
             tool_results.append(
                 types.Part(
@@ -87,6 +89,8 @@ def run_agent(user_question: str) -> str:
             )
 
         messages.append(types.Content(role="user", parts=tool_results))
+
+    return "Não foi possível gerar uma resposta após múltiplas tentativas."
 
 
 if __name__ == "__main__":
