@@ -2,7 +2,7 @@
 
 Agente de IA capaz de responder perguntas em linguagem natural sobre um banco de dados de e-commerce, utilizando **Gemini 2.5 Flash** e **SQLite**. O agente converte perguntas em português para queries SQL automaticamente (Text-to-SQL), executa no banco e retorna respostas interpretadas.
 
-## 🗂️ Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 ecommerce-agent/
@@ -18,7 +18,7 @@ ecommerce-agent/
 └── README.md
 ```
 
-## 🗃️ Tabelas Disponíveis
+## Tabelas Disponíveis
 
 | Tabela | Descrição | Registros |
 |---|---|---|
@@ -30,12 +30,12 @@ ecommerce-agent/
 | `fat_itens_pedidos` | Itens de cada pedido com preço e frete | 112.650 |
 | `fat_avaliacoes_pedidos` | Avaliações e comentários dos pedidos | 95.307 |
 
-## ⚙️ Pré-requisitos
+## Pré-requisitos
 
 - Python 3.10+
 - Chave de API do Google Gemini (gratuita via [Google AI Studio](https://aistudio.google.com/apikey))
 
-## 🚀 Instalação
+## Instalação
 
 1. Clone o repositório:
 ```bash
@@ -63,7 +63,7 @@ cp .env.example .env
 
 5. Certifique-se de que o arquivo `banco.db` está na raiz do projeto.
 
-## ▶️ Execução
+## Execução
 
 ### Chat interativo
 ```bash
@@ -83,7 +83,7 @@ python3 examples.py "Consumidores"
 python3 examples.py "Vendedores e Produtos"
 ```
 
-## 💡 Exemplos de Perguntas
+## Exemplos de Perguntas
 
 **Vendas e Receita**
 - Quais são os 10 produtos mais vendidos?
@@ -105,7 +105,7 @@ python3 examples.py "Vendedores e Produtos"
 - Quais são os produtos mais vendidos por estado?
 - Quais categorias têm maior taxa de avaliação negativa?
 
-## 🏗️ Arquitetura
+## Arquitetura
 
 ```
 Usuário (linguagem natural)
@@ -127,7 +127,7 @@ Usuário (linguagem natural)
 - **Auto-correção iterativa**: em caso de erro na query, o agente tenta corrigir automaticamente
 - **Retry automático**: lida com erros 503 (sobrecarga) e 429 (rate limit) da API
 
-## 📦 Dependências
+## Dependências
 
 | Pacote | Uso |
 |---|---|
